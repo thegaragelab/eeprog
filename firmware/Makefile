@@ -12,15 +12,19 @@ F_CPU     = 8000000
 
 # Define tools and options
 # All you really need to do is change the TARGET name
-TARGET   := attiny84
+TARGET   := eeprog
 SIZE     := avr-size
 CXX      := avr-gcc
 OPTIMISE := -ffunction-sections -fdata-sections -ffreestanding
 CFLAGS   := -std=gnu99 -Wall -Os -mmcu=$(MCU) -DF_CPU=$(F_CPU) -I$(BASE_DIR)/include
 LDFLAGS  := -mmcu=$(MCU) -Wl,--gc-sections -Wl,--relax
 OBJCOPY  := avr-objcopy
-MBFLASH  := tools/mbflash.py
-DOXYGEN  := doxygen
+AVRDUDE  := avrdude
+
+# Fuse settings (for ATtiny84)
+LFUSE := 0xE2
+HFUSE := 0xDD
+EFUSE := 0xFF
 
 # Check for DEBUG options
 ifneq ($(DEBUG),)
@@ -52,11 +56,10 @@ clean:
 	@rm -f $(OBJECTS) $(TARGET).hex $(TARGET).elf
 
 flash: $(TARGET).hex
-ifneq ($(PORT),)
-	@$(MBFLASH) -d $(MCU) -p $(PORT) $(TARGET).hex
-else
-	@$(MBFLASH) -d $(MCU) $(TARGET).hex
-endif
+	@$(AVRDUDE) -p t84 -c usbasp -e -U flash:w:$(TARGET).hex
+
+fuses:
+	@$(AVRDUDE) -p t84 -c usbasp -U efuse:w:$(EFUSE):m -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m
 
 docs:
 	@rm -rf docs
