@@ -75,8 +75,11 @@ void strPrint(FN_WRITE_CHAR pfnWriteCh, const char *cszString) {
  * @param cszString pointer to a character array in PROGMEM.
  */
 void strPrintP(FN_WRITE_CHAR pfnWriteCh, const char *cszString) {
-  for(uint8_t ch = flashReadByte((uint16_t)cszString);ch; cszString++)
+  uint8_t ch;
+  while((ch = flashReadByte((uint16_t)cszString))!=0) {
     (*pfnWriteCh)(ch);
+    cszString++;
+    }
   }
 
 /** Print an unsigned 16 bit value in decimal
