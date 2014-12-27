@@ -86,7 +86,9 @@ void strPrintHex(FN_WRITE_CHAR pfnWriteCh, uint16_t value, uint8_t digits);
  *       argument list for this entry.
  *  %u - Display an unsigned integer in decimal. The matching argument may
  *       be any 16 bit value.
- *  %x - Display an unsigned integer in hexadecimal. The matching argument may
+ *  %x - Display an unsigned byte in hexadecimal. The matching argument may
+ *       be any 8 bit value.
+ *  %X - Display an unsigned word in hexadecimal. The matching argument may
  *       be any 16 bit value.
  *  %c - Display a single ASCII character. The matching argument may be any 8
  *       bit value.
@@ -112,7 +114,9 @@ void strFormat(FN_WRITE_CHAR pfnWriteCh, const char *cszString, ...);
  *       argument list for this entry.
  *  %u - Display an unsigned integer in decimal. The matching argument may
  *       be any 16 bit value.
- *  %x - Display an unsigned integer in hexadecimal. The matching argument may
+ *  %x - Display an unsigned byte in hexadecimal. The matching argument may
+ *       be any 8 bit value.
+ *  %X - Display an unsigned word in hexadecimal. The matching argument may
  *       be any 16 bit value.
  *  %c - Display a single ASCII character. The matching argument may be any 8
  *       bit value.

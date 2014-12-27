@@ -13,6 +13,19 @@
 // Helper functions
 //---------------------------------------------------------------------------
 
+/** Get the hex digit for the given value
+ *
+ * @param value the value to get the hext digit for
+ *
+ * @return the ASCII code for the hex digit.
+ */
+static uint8_t getHexDigit(uint8_t value) {
+  value = value & 0x0F;
+  if(value<10)
+    return '0' + value;
+  return 'a' + value - 10;
+  }
+
 /** Do the actual formatting
  *
  * This function uses the current two characters of the input string to
@@ -38,6 +51,8 @@ static bool printFormat(FN_WRITE_CHAR pfnWriteCh, char ch1, char ch2, va_list *a
     else if(ch2=='u')
       strPrintInt(pfnWriteCh, va_arg(*args, unsigned int));
     else if(ch2=='x')
+      strPrintHex(pfnWriteCh, va_arg(*args, unsigned int), 2);
+    else if(ch2=='X')
       strPrintHex(pfnWriteCh, va_arg(*args, unsigned int), 4);
     else if(ch2=='s')
       strPrint(pfnWriteCh, va_arg(*args, char *));
@@ -116,7 +131,11 @@ void strPrintInt(FN_WRITE_CHAR pfnWriteCh, uint16_t value) {
  * @param digits the number of digits to use for display.
  */
 void strPrintHex(FN_WRITE_CHAR pfnWriteCh, uint16_t value, uint8_t digits) {
-  // TODO: Implement this
+  // TODO: Should check for digit count max and min
+  while(digits) {
+    (*pfnWriteCh)(getHexDigit(value >> ((digits - 1) * 4)));
+    digits--;
+    }
   }
 
 /** Print a formatted string from RAM
@@ -128,7 +147,9 @@ void strPrintHex(FN_WRITE_CHAR pfnWriteCh, uint16_t value, uint8_t digits) {
  *       argument list for this entry.
  *  %u - Display an unsigned integer in decimal. The matching argument may
  *       be any 16 bit value.
- *  %x - Display an unsigned integer in hexadecimal. The matching argument may
+ *  %x - Display an unsigned byte in hexadecimal. The matching argument may
+ *       be any 8 bit value.
+ *  %X - Display an unsigned word in hexadecimal. The matching argument may
  *       be any 16 bit value.
  *  %c - Display a single ASCII character. The matching argument may be any 8
  *       bit value.
@@ -165,7 +186,9 @@ void strFormat(FN_WRITE_CHAR pfnWriteCh, const char *cszString, ...) {
  *       argument list for this entry.
  *  %u - Display an unsigned integer in decimal. The matching argument may
  *       be any 16 bit value.
- *  %x - Display an unsigned integer in hexadecimal. The matching argument may
+ *  %x - Display an unsigned byte in hexadecimal. The matching argument may
+ *       be any 8 bit value.
+ *  %X - Display an unsigned word in hexadecimal. The matching argument may
  *       be any 16 bit value.
  *  %c - Display a single ASCII character. The matching argument may be any 8
  *       bit value.
