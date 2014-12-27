@@ -31,7 +31,7 @@ void uartInit();
  *
  * @param ch the character to send.
  */
-void uartWrite(char ch);
+void uartWrite(uint8_t ch);
 
 /** Determine if characters are available
  *
@@ -52,7 +52,7 @@ uint8_t uartAvail();
  *
  * @return the character received.
  */
-char uartRead();
+uint8_t uartRead();
 
 //---------------------------------------------------------------------------
 // Debugging output support (requires formatted print functions)

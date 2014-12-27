@@ -62,8 +62,8 @@ uint8_t uartAvail() {
  *
  * @return the character received.
  */
-char uartRead() {
-  char ch;
+uint8_t uartRead() {
+  uint8_t ch;
 #ifdef UART_INTERRUPT
   // Wait for a character
   while(g_index==0);

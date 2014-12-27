@@ -49,7 +49,7 @@ void uartInit() {
  *
  * @param ch the character to send.
  */
-void uartWrite(char ch) {
+void uartWrite(uint8_t ch) {
   // Set to output state and bring high
   PORTB |= (1 << UART_TX);
 #ifdef UART_ONEPIN
