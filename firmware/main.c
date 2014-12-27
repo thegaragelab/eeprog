@@ -8,12 +8,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <microboard.h>
+#include <softuart.h>
+#include <mbstring.h>
 
-// Forward declaration with 'noreturn' attribute
+// Program banner
+#define BANNER PSTR("EEPROG V0.1\n")
+
+// Forward definition of 'main()'
 void main() __attribute__ ((noreturn));
 
 /** Program entry point
  */
-void main() {
+void main()  {
+  uartInit();
+  uartPrintP(BANNER);
   while(true);
   }
