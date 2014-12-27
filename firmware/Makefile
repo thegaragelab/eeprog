@@ -35,6 +35,7 @@ SOURCES = \
 SHARED = \
   target/avr/uart_send.c \
   target/avr/uart_recv.c \
+  target/avr/flash.c \
   shared/mbstring.c \
   shared/softspi.c
 

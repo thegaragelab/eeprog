@@ -34,7 +34,7 @@ typedef void (*FN_WRITE_CHAR)(uint8_t ch);
 void strPrint(FN_WRITE_CHAR pfnWriteCh, const char *cszString);
 
 //! Helper macro to print to the serial port
-#define serialPrint(cszString) strPrint(serialWrite, cszString)
+#define uartPrint(cszString) strPrint(uartWrite, cszString)
 
 /** Print a string from PROGMEM
  *
@@ -46,7 +46,7 @@ void strPrint(FN_WRITE_CHAR pfnWriteCh, const char *cszString);
 void strPrintP(FN_WRITE_CHAR pfnWriteCh, const char *cszString);
 
 //! Helper macro to print to the serial port
-#define serialPrintP(cszString) strPrintP(serialWrite, cszString)
+#define uartPrintP(cszString) strPrintP(uartWrite, cszString)
 
 /** Print an unsigned 16 bit value in decimal
  *
@@ -58,7 +58,7 @@ void strPrintP(FN_WRITE_CHAR pfnWriteCh, const char *cszString);
 void strPrintInt(FN_WRITE_CHAR pfnWriteCh, uint16_t value);
 
 //! Helper macro to print to the serial port
-#define serialPrintInt(value) strPrintInt(serialWrite, value)
+#define uartPrintInt(value) strPrintInt(uartWrite, value)
 
 /** Print an unsigned 16 bit value in hexadecimal
  *
@@ -71,7 +71,7 @@ void strPrintInt(FN_WRITE_CHAR pfnWriteCh, uint16_t value);
 void strPrintHex(FN_WRITE_CHAR pfnWriteCh, uint16_t value, uint8_t digits);
 
 //! Helper macro to print to the serial port
-#define serialPrintHex(value) strPrintHex(serialWrite, value)
+#define uartPrintHex(value) strPrintHex(uartWrite, value)
 
 //---------------------------------------------------------------------------
 // Formatted output
@@ -101,7 +101,7 @@ void strPrintHex(FN_WRITE_CHAR pfnWriteCh, uint16_t value, uint8_t digits);
 void strFormat(FN_WRITE_CHAR pfnWriteCh, const char *cszString, ...);
 
 //! Helper macro to print to the serial port
-#define serialFormat(format, ...) strFormat(serialWrite, format, __VA_ARGS__)
+#define uartFormat(format, ...) strFormat(uartWrite, format, __VA_ARGS__)
 
 /** Print a formatted string from flash (PROGMEM on AVR)
  *
@@ -126,7 +126,7 @@ void strFormat(FN_WRITE_CHAR pfnWriteCh, const char *cszString, ...);
 void strFormatP(FN_WRITE_CHAR pfnWriteCh, const char *cszString, ...);
 
 //! Helper macro to print to the serial port
-#define serialFormatP(format, ...) strFormatP(serialWrite, format, __VA_ARGS__)
+#define uartFormatP(format, ...) strFormatP(uartWrite, format, __VA_ARGS__)
 
 #ifdef __cplusplus
 }
