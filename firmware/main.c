@@ -64,7 +64,7 @@ typedef enum {
   CMD_INIT  = 'i', //!< Initialise and set the target device.
   CMD_READ  = 'r', //!< Read data from EEPROM
   CMD_WRITE = 'w', //!< Write data to EEPROM
-  CMD_DONE = 'd',  //!< Done. Flush any pending data
+  CMD_DONE  = 'd', //!< Done. Flush any pending data
   } COMMAND;
 
 /** Possible modes
@@ -75,11 +75,38 @@ typedef enum {
   MODE_WRITING, //!< Writing to EEPROM
   } MODE;
 
+/** Masks and shifts to interpret the device configuration word
+ */
+typedef enum {
+  // EEPROM type information
+  EEPROM_TYPE_SPI = 0,
+  EEPROM_TYPE_I2C = 1,
+  EEPROM_TYPE_MASK = 0x8000,
+  EEPROM_TYPE_SHIFT = 15,
+  // Page size information
+  EEPROM_PAGE_BITS_MASK = 0x7000,
+  EEPROM_PAGE_BITS_SHIFT = 12,
+  // EEPROM size information
+  EEPROM_SIZE_BITS_MASK = 0x0F80,
+  EEPROM_SIZE_BITS_SHIFT = 7,
+  // EEPROM address byte count
+  EEPROM_ADDR_BYTES_MASK = 0x0070,
+  EEPROM_ADDR_BYTES_SHIFT = 4,
+  // Extra bits (reserved)
+  EEPROM_RESERVED_MASK = 0x000f,
+  EEPROM_RESERVED_SHIFT= 0,
+  } CHIP_IDENT;
+
 //! The line input buffer
 static uint8_t s_szLine[LINE_LENGTH];
 
 //! The data buffer
-static uint8_t s_sBuffer[BUFFER_SIZE];
+static uint8_t s_buffer[BUFFER_SIZE];
+
+static bool     s_spi;          //!< True for SPI interface
+static uint8_t  s_pageSize;     //!< Size of a page in bytes
+static uint8_t  s_addrBytes;    //!< Number of bytes to send as an address
+static uint32_t s_maxAddr;      //!< Highest address in chip
 
 /** Determine if the character is a hex digit or not
  */
@@ -150,6 +177,75 @@ void respond(bool success, const char *cszMessage) {
   uartFormatP(PSTR("%c%S\n"), success?'+':'-', cszMessage?cszMessage:PSTR(""));
   }
 
+/** Perform the 'init' command
+ *
+ * @param data the number of data bytes provided on the line.
+ *
+ * @return true on success, false on failure.
+ */
+static bool doInit(uint8_t data) {
+  if(data!=2) { 
+    // Want a 16 bit value
+    respond(false, PSTR("16 bit device ID required."));
+    return false;
+    }
+  uint16_t ident = ((uint16_t)s_szLine[1] << 8) | s_szLine[2];
+  // Get the type of device
+  uint16_t value = (ident & EEPROM_TYPE_MASK) >> EEPROM_TYPE_SHIFT;
+  s_spi = (value == EEPROM_TYPE_SPI);
+  // Get the size of a page (specified as bits - 1)
+  value = (ident & EEPROM_PAGE_BITS_MASK) >> EEPROM_PAGE_BITS_SHIFT;
+  s_pageSize = (1 << (value + 1)) - 1;
+  // Get the total size of the EEPROM (specified as bits - 1)
+  value = (ident & EEPROM_SIZE_BITS_MASK) >> EEPROM_SIZE_BITS_SHIFT;
+  s_maxAddr = (1 << (value + 1)) - 1;
+  // Get the number of bytes to use in the address
+  value = (ident & EEPROM_ADDR_BYTES_MASK) >> EEPROM_ADDR_BYTES_SHIFT;
+  s_addrBytes = value;
+  // Make sure the reserved values are 0
+  value = (ident & EEPROM_RESERVED_MASK) >> EEPROM_RESERVED_SHIFT;
+  if(value) {
+    respond(false, PSTR("Invalid device identifier."));
+    return false;
+    }
+  // TODO: Would be nice to include information in the response line
+  respond(true, NULL);
+  return true;
+  }
+
+/** Perform the 'read' command
+ *
+ * @param data the number of data bytes provided on the line.
+ *
+ * @return true on success, false on failure.
+ */
+static bool doRead(uint8_t data) {
+  respond(false, NULL);
+  return false;
+  }
+
+/** Perform the 'write' command
+ *
+ * @param data the number of data bytes provided on the line.
+ *
+ * @return true on success, false on failure.
+ */
+static bool doWrite(uint8_t data) {
+  respond(false, NULL);
+  return false;
+  }
+
+/** Perform the 'done' command
+ *
+ * @param data the number of data bytes provided on the line.
+ *
+ * @return true on success, false on failure.
+ */
+static bool doDone(uint8_t data) {
+  respond(false, NULL);
+  return false;
+  }
+
 //---------------------------------------------------------------------------
 // Hardware interface
 //---------------------------------------------------------------------------
@@ -202,34 +298,28 @@ void main()  {
       if(mode==MODE_WAITING) {
         if(s_szLine[0]==CMD_INIT) {
           // Initialise device
-          mode = MODE_READY;
-          respond(true, NULL);
+          if(doInit(data))
+            mode = MODE_READY;
           }
         else
           respond(false, PSTR("Command invalid for mode."));
         }
       else if(mode==MODE_READY) {
-        if(s_szLine[0]==CMD_READ) {
-          // Read data
-          respond(true, NULL);
-          }
+        if(s_szLine[0]==CMD_READ)
+          doRead(data);
         else if(s_szLine[0]==CMD_WRITE) {
-          // Set up write data and change mode
-          mode = MODE_WRITING;
-          respond(true, NULL);
+          if(doWrite(data))
+            mode = MODE_WRITING;
           }
         else
           respond(false, PSTR("Command invalid for mode."));
         }
       else if(mode==MODE_WRITING) {
-        if(s_szLine[0]==CMD_WRITE) {
-          // Add data to buffer
-          respond(true, NULL);
-          }
+        if(s_szLine[0]==CMD_WRITE)
+          doWrite(data);
         else if(s_szLine[0]==CMD_DONE) {
-          // Finish write, return to READY mode
-          mode = MODE_READY;
-          respond(true, NULL);
+          if(doDone(data))
+            mode = MODE_READY;
           }
         else
           respond(false, PSTR("Command invalid for mode."));
