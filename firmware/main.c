@@ -402,8 +402,25 @@ static bool doWrite(uint8_t data, bool first) {
  * @return true on success, false on failure.
  */
 static bool doDone(uint8_t data) {
-  respond(false, NULL);
-  return false;
+  if(data!=0) {
+    respond(false, PSTR("Unexpected data in command."));
+    return false;
+    }
+  // Do we have anything left to write?
+  if(s_buffIndex>0) {
+    // Grab the data already in the page to fill it out then write
+    if(s_spi) {
+      spiReadData(s_buffBase + s_buffIndex, s_pageSize - s_buffIndex, &s_buffer[s_buffIndex]);
+      spiWritePage(s_buffBase, s_buffer);
+      }
+    else {
+      i2cReadData(s_buffBase + s_buffIndex, s_pageSize - s_buffIndex, &s_buffer[s_buffIndex]);
+      i2cWritePage(s_buffBase, s_buffer);
+      }
+    }
+  // All done
+  respond(true, NULL);
+  return true;
   }
 
 //---------------------------------------------------------------------------
