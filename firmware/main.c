@@ -141,6 +141,8 @@ void i2cWritePage(uint32_t addr, uint8_t *pBuffer) {
  */
 void spiReadData(uint32_t addr, uint16_t length, uint8_t *pBuffer) {
   // TODO: Implement this
+  for(uint16_t index=0;index<length;index++)
+    pBuffer[index] = (uint8_t)(index & 0xff);
   }
 
 /** Write a single page to an SPI EEPROM
@@ -152,7 +154,7 @@ void spiReadData(uint32_t addr, uint16_t length, uint8_t *pBuffer) {
  * @param pBuffer pointer to the buffer containing the data
  */
 void spiWritePage(uint32_t addr, uint8_t *pBuffer) {
-  uartFormatP(PSTR("Wrote page at 0x%X%x\n"), (uint16_t)(addr >> 16), (uint16_t)(addr & 0xffff));
+  //uartFormatP(PSTR("Wrote page at 0x%X%x\n"), (uint16_t)(addr >> 16), (uint16_t)(addr & 0xffff));
   // TODO: Implement this
   }
 
@@ -318,12 +320,12 @@ static bool doRead(uint8_t data) {
     i2cReadData(addr, length, &s_szLine[4]);
   // Calculate the checksum
   uint16_t check = checksum(&s_szLine[1], length + 3);
-  s_szLine[length + 5] = (uint8_t)(check >> 8);
-  s_szLine[length + 6] = (uint8_t)(check & 0xFF);
+  s_szLine[length + 4] = (uint8_t)(check >> 8);
+  s_szLine[length + 5] = (uint8_t)(check & 0xFF);
   // Send the response
   uartWrite('+');
-  for(uint16_t index=1; index<(length + 7); index++)
-    uartFormatP(PSTR("%x"), s_szLine[index]);
+  for(uint16_t index=0; index<(length + 5); index++)
+    uartFormatP(PSTR("%x"), s_szLine[index + 1]);
   uartWrite(EOL);
   return true;
   }
@@ -511,3 +513,4 @@ void main()  {
       }
     }
   }
+
