@@ -93,9 +93,12 @@ typedef enum {
 //! The line input buffer
 static uint8_t s_szLine[LINE_LENGTH];
 
-//! The data buffer
-static uint8_t s_buffer[BUFFER_SIZE];
+//--- Write buffer management
+static uint8_t  s_buffer[BUFFER_SIZE]; //!< The buffer itself
+static uint32_t s_buffBase;            //!< Base address of buffer
+static uint16_t s_buffIndex;           //!< Current index into buffer
 
+//--- Chip characteristics
 static bool     s_spi;          //!< True for SPI interface
 static uint16_t s_pageSize;     //!< Size of a page in bytes
 static uint8_t  s_addrBytes;    //!< Number of bytes to send as an address
@@ -149,6 +152,7 @@ void spiReadData(uint32_t addr, uint16_t length, uint8_t *pBuffer) {
  * @param pBuffer pointer to the buffer containing the data
  */
 void spiWritePage(uint32_t addr, uint8_t *pBuffer) {
+  uartFormatP(PSTR("Wrote page at 0x%X%x\n"), (uint16_t)(addr >> 16), (uint16_t)(addr & 0xffff));
   // TODO: Implement this
   }
 
@@ -332,8 +336,63 @@ static bool doRead(uint8_t data) {
  * @return true on success, false on failure.
  */
 static bool doWrite(uint8_t data, bool first) {
-  respond(false, NULL);
-  return false;
+  // Make sure we have enough data
+  // (must be 3 byte address, at least 1 data byte and a checksum)
+  if(data<6) {
+    respond(false, PSTR("Not enough data for command."));
+    return false;
+    }
+  // Verify the checksum
+  uint16_t check = checksum(&s_szLine[1], data - 2);
+  if(((check >> 8)!=s_szLine[data - 1])||((check & 0xff)!=s_szLine[data])) {
+    respond(false, PSTR("Invalid checksum."));
+    return false;
+    }
+  // Get and check the address
+  uint32_t addr = getAddress(&s_szLine[1]);
+  uint8_t length = data - 5;
+  if((addr + (uint32_t)length)>s_chipSize) {
+    respond(false, PSTR("Address out of range."));
+    return false;
+    }
+  // On first write we do some initial set up
+  if(first) {
+    // Initialise the buffer
+    s_buffBase = addr & ~((uint32_t)s_pageSize - 1);
+    s_buffIndex = (uint8_t)(addr - s_buffBase);
+    // If we are starting part way through a page we prime with the
+    // existing data on the chip
+    if(s_buffIndex) {
+      if(s_spi)
+        spiReadData(s_buffBase, s_buffIndex, s_buffer);
+      else
+        i2cReadData(s_buffBase, s_buffIndex, s_buffer);
+      }
+    }
+  // Data must be sequential
+  if(addr!=(uint32_t)(s_buffBase + (uint32_t)s_buffIndex)) {
+    respond(false, PSTR("Data is not sequential."));
+    return false;
+    }
+  // Add the data to the buffer
+  uint16_t offset;
+  for(offset=0; offset<length; offset++)
+    s_buffer[s_buffIndex++] = s_szLine[offset + 4];
+  // Write any full pages to the chip
+  while(s_buffIndex>=s_pageSize) {
+    // Write the page
+    if(s_spi)
+      spiWritePage(s_buffBase, s_buffer);
+    else
+      i2cWritePage(s_buffBase, s_buffer);
+    // Adust the buffer
+    for(offset=s_pageSize;offset<s_buffIndex;offset++)
+      s_buffer[offset - s_pageSize] = s_buffer[offset];
+    s_buffBase += (uint32_t)s_pageSize;
+    s_buffIndex -= s_pageSize;
+    }
+  respond(true, NULL);
+  return true;
   }
 
 /** Perform the 'done' command
