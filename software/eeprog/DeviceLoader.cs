@@ -446,12 +446,13 @@ namespace eeprog
         // Set the EEPROM identifier
         CheckResponse(SendCommand('i', eeprom.ID));
         // Write the data
-        int written = 0;
         FireProgress(ProgressState.Write, 0, data.Length + 1, "Writing data.");
-        while (written < data.Length)
+        while (offset < data.Length)
         {
-          // Ask for the next block
-          Response response = CheckResponse(SendCommand("w" + HexString(data, offset, written, Math.Min(32, data.Length - written))));
+          // Write the next block
+          int chunk = Math.Min(32, data.Length - (int)offset);
+          Response response = CheckResponse(SendCommand("w" + HexString(data, offset, (int)offset, chunk)));
+          offset += (UInt32)chunk;
           // Update progress
           FireProgress(ProgressState.Write, (int)offset, data.Length + 1);
         }
