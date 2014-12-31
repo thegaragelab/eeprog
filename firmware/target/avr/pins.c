@@ -16,16 +16,16 @@
 /** Port for the pin
  */
 typedef enum {
-  NONE,
-  A,
-  B,
+  NONE  = 0x00,
+  USE_A = 0x10,
+  USE_B = 0x20,
   } PORT;
 
 //! Define pin information
-#define PINDEF(port, bit) (((port)<<4)|(bit))
+#define PINDEF(port, bit) ((port)|(bit))
 
 //! Get the port number from a pin definition
-#define GETPORT(def) (((def)>>4)&0x0F)
+#define GETPORT(def) ((def)&0xF0)
 
 //! Get the pin numer from a pin definition
 #define GETPIN(def) ((def)&0x0F)
@@ -36,20 +36,20 @@ typedef enum {
 /** Pin mappings for ATtiny84
  */
 static const uint8_t s_pins[] PROGMEM = {
-  PINDEF(NONE, 0), //!< 1 = Vcc
-  PINDEF(B, 0),    //!< 2 = PB0
-  PINDEF(B, 1),    //!< 3 = PB1
-  PINDEF(NONE, 0), //!< 4 = RESET
-  PINDEF(B, 2),    //!< 5 = PB2
-  PINDEF(A, 7),    //!< 6 = PA7
-  PINDEF(A, 6),    //!< 7 = PA6
-  PINDEF(A, 5),    //!< 8 = PA5
-  PINDEF(A, 4),    //!< 9 = PA4
-  PINDEF(A, 3),    //!< 10 = PA3
-  PINDEF(A, 2),    //!< 11 = PA2
-  PINDEF(A, 1),    //!< 12 = PA1
-  PINDEF(A, 0),    //!< 13 = PA0
-  PINDEF(NONE, 0), //!< 14 = GND
+  PINDEF(NONE, 0),  //!< 1 = Vcc
+  PINDEF(USE_B, 0), //!< 2 = PB0
+  PINDEF(USE_B, 1), //!< 3 = PB1
+  PINDEF(NONE, 0),  //!< 4 = RESET
+  PINDEF(USE_B, 2), //!< 5 = PB2
+  PINDEF(USE_A, 7), //!< 6 = PA7
+  PINDEF(USE_A, 6), //!< 7 = PA6
+  PINDEF(USE_A, 5), //!< 8 = PA5
+  PINDEF(USE_A, 4), //!< 9 = PA4
+  PINDEF(USE_A, 3), //!< 10 = PA3
+  PINDEF(USE_A, 2), //!< 11 = PA2
+  PINDEF(USE_A, 1), //!< 12 = PA1
+  PINDEF(USE_A, 0), //!< 13 = PA0
+  PINDEF(NONE, 0),  //!< 14 = GND
   };
 #else
 #  error "Unsupported CPU"
@@ -66,7 +66,7 @@ static uint8_t isPinValid(uint8_t pin) {
   // Make sure the pin is in range
   if(pin>MAX_PIN)
     return 0;
-  return flashReadByte((uint16_t)s_pins + pin);
+  return flashReadByte((uint16_t)s_pins + pin - 1);
   }
 
 //---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ bool pinConfig(PIN pin, PIN_DIRECTION direction) {
     return false;
   uint8_t bit = 1 << GETPIN(def);
   // Set up the pin
-  if(GETPORT(def)==A) {
+  if(GETPORT(def)==USE_A) {
     if(direction==OUTPUT)
       DDRA |= bit;
     else {
@@ -123,7 +123,7 @@ void pinWrite(PIN pin, bool state) {
     return;
   uint8_t bit = 1 << GETPIN(def);
   // Change the output state
-  if(GETPORT(def)==A) {
+  if(GETPORT(def)==USE_A) {
     if(state)
       PINA |= bit;
     else
@@ -153,7 +153,7 @@ bool pinRead(PIN pin) {
     return false;
   uint8_t bit = 1 << GETPIN(def);
   // Read the input state
-  if(GETPORT(def)==A)
+  if(GETPORT(def)==USE_A)
     return PINA & bit;
   // PORTB
   return PINB & bit;
