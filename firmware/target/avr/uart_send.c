@@ -58,7 +58,7 @@ void uartWrite(uint8_t ch) {
   cli();
   asm volatile(
     "  cbi %[uart_port], %[uart_pin]    \n\t"  // start bit
-    "  in r0, %[uart_port]              \n\t"
+    "  in r0, %[uart_input]             \n\t"
     "  ldi r30, 3                       \n\t"  // stop bit + idle state
     "  ldi r28, %[txdelay]              \n\t"
     "TxLoop:                            \n\t"
@@ -76,6 +76,7 @@ void uartWrite(uint8_t ch) {
     "  brne TxLoop                      \n\t"
     :
     : [uart_port] "I" (_SFR_IO_ADDR(PORTB)),
+      [uart_input] "I" (_SFR_IO_ADDR(PINB)),
       [uart_pin] "I" (UART_TX),
       [txdelay] "I" (TXDELAY),
       [ch] "r" (ch)

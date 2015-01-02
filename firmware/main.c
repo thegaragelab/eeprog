@@ -90,6 +90,17 @@ typedef enum {
   EEPROM_RESERVED_SHIFT= 0,
   } CHIP_IDENT;
 
+typedef enum {
+  SPI_READ  = 0x03, //!< Read data from chip
+  SPI_WRITE = 0x02, //!< Write data to chip
+  SPI_WREN  = 0x06, //!< Write enable
+  SPI_RDSR  = 0x05, //!< Read status register
+  } SPI_COMMANDS;
+
+typedef enum {
+  SPI_STATUS_WIP = 0x01, //!< Write in progress
+  } SPI_STATUS;
+
 //! The line input buffer
 static uint8_t s_szLine[LINE_LENGTH];
 
@@ -104,12 +115,32 @@ static uint16_t s_pageSize;     //!< Size of a page in bytes
 static uint8_t  s_addrBytes;    //!< Number of bytes to send as an address
 static uint32_t s_chipSize;     //!< Chip capacity in bytes
 
+/** SPI configuration
+ */
+static SSPI_INTERFACE s_SPI = {
+  { NULL },
+  SPI_PHASE_TRAILING | SPI_POLARITY_LOW | SPI_MSB_FIRST,
+  MISO,
+  MOSI,
+  SCK
+  };
+
 // Forward definition of 'main()'
 void main() __attribute__ ((noreturn));
 
 //---------------------------------------------------------------------------
 // EEPROM Interface
 //---------------------------------------------------------------------------
+
+/** Send a multibyte address over SPI
+ */
+static void spiSendAddress(uint32_t address) {
+  uint32_t mask = 0x000000ffL << ((s_addrBytes - 1) * 8);
+  for(uint8_t count=s_addrBytes; count; count--) {
+    uint32_t byte = (address & mask) >> ((count - 1) * 8);
+    sspiTransfer(&s_SPI, byte, 8);
+    }
+  }
 
 /** Read data from an I2C EEPROM
  *
@@ -140,9 +171,16 @@ void i2cWritePage(uint32_t addr, uint8_t *pBuffer) {
  * @param pBuffer pointer to the buffer to contain the data
  */
 void spiReadData(uint32_t addr, uint16_t length, uint8_t *pBuffer) {
-  // TODO: Implement this
+  // Select the chip (assume it is already powered)
+  pinWrite(CS, false);
+  // Send command and address
+  sspiTransfer(&s_SPI, SPI_READ, 8);
+  spiSendAddress(addr);
+  // Now read the data
   for(uint16_t index=0;index<length;index++)
-    pBuffer[index] = (uint8_t)(index & 0xff);
+    pBuffer[index] = sspiTransfer(&s_SPI, 0, 8);
+  // Deselect the chip
+  pinWrite(CS, true);
   }
 
 /** Write a single page to an SPI EEPROM
@@ -429,16 +467,6 @@ static bool doDone(uint8_t data) {
 // Hardware interface
 //---------------------------------------------------------------------------
 
-/** SPI configuration
- */
-static SSPI_INTERFACE s_SPI = {
-  { NULL },
-  SPI_PHASE_TRAILING | SPI_POLARITY_LOW | SPI_MSB_FIRST,
-  MISO,
-  MOSI,
-  SCK
-  };
-
 /** Initialise the hardware
  */
 static void hwInit() {
@@ -446,9 +474,9 @@ static void hwInit() {
   pinConfig(CS, OUTPUT);
   pinWrite(CS, true);
   pinConfig(PWR_SPI, OUTPUT);
-  pinWrite(PWR_SPI, false);
+  pinWrite(PWR_SPI, true);
   pinConfig(PWR_I2C, OUTPUT);
-  pinWrite(PWR_I2C, false);
+  pinWrite(PWR_I2C, true);
   // Initialise subsystems
   uartInit();
   sspiInit(&s_SPI);
@@ -471,8 +499,8 @@ void main()  {
     else if(s_szLine[0]==CMD_RESET) {
       // Reset module
       mode = MODE_WAITING;
-      pinWrite(PWR_SPI, false);
-      pinWrite(PWR_I2C, false);
+//      pinWrite(PWR_SPI, false);
+//      pinWrite(PWR_I2C, false);
       uartPrintP(BANNER);
       }
     else {
@@ -481,7 +509,7 @@ void main()  {
           // Initialise device
           if(doInit(data)) {
             // Power on the selected device
-            pinWrite(s_spi?PWR_SPI:PWR_I2C, true);
+//            pinWrite(s_spi?PWR_SPI:PWR_I2C, true);
             mode = MODE_READY;
             }
           }
