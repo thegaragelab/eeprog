@@ -260,6 +260,12 @@ namespace eeprog
     #endregion
 
     #region "Implementation"
+
+    private bool IsPrintableCharacter(char candidate)
+    {
+      return !(candidate < 0x20 || candidate > 127);
+    }
+
     /// <summary>
     /// Open the serial port. Exceptions are passed on to the caller.
     /// </summary>
@@ -267,8 +273,21 @@ namespace eeprog
     private void OpenPort(string port)
     {
       m_serial = new SerialPort(port, BAUD_RATE, Parity.None, 8, StopBits.One);
-      m_serial.ReadTimeout = 2500;
+      m_serial.ReadTimeout = 5500;
+      m_serial.DtrEnable = true;
+      m_serial.Handshake = Handshake.None;
       m_serial.Open();
+      //m_serial.DiscardInBuffer();
+      //m_serial.ReadExisting();
+      List<byte> result = new List<byte>();
+      for (int ch = m_serial.ReadByte(); (ch != '\n') && (result.Count < 128); ch = m_serial.ReadByte()) {
+        if (IsPrintableCharacter((char)ch))
+          result.Add((byte)ch);
+      }
+      ASCIIEncoding encoding = new ASCIIEncoding();
+      string response = encoding.GetString(result.ToArray(), 0, result.Count).TrimEnd();
+      FireCommunications(Direction.Input, response);
+      CheckSignature(response);
     }
 
     private void CheckSignature(string response)
@@ -428,7 +447,11 @@ namespace eeprog
       }
     }
 
-    public void Write(string port, EEPROM eeprom, UInt32 offset, FileInfo source)
+    /**
+     * address is the start eeprom address
+     * offset is the start file offset
+     * */
+    public void Write(string port, EEPROM eeprom, UInt32 address, UInt32 offset, FileInfo source)
     {
       if (Operation != Operation.Idle)
         throw new InvalidOperationException("Operation already in progress.");
@@ -437,6 +460,9 @@ namespace eeprog
       {
         // Read the data from the file
         byte[] data = File.ReadAllBytes(source.FullName);
+        if (data.Length-offset > eeprom.Size) {
+          FireError("Invalid file size.");
+        }
         // Establish a connection
         FireConnectionStateChanged(ConnectionState.Connecting);
         OpenPort(port);
@@ -451,8 +477,10 @@ namespace eeprog
         {
           // Write the next block
           int chunk = Math.Min(32, data.Length - (int)offset);
-          Response response = CheckResponse(SendCommand("w" + HexString(data, offset, (int)offset, chunk)));
+          //Response response = 
+          CheckResponse(SendCommand("w" + HexString(data, address, (int)offset, chunk)));
           offset += (UInt32)chunk;
+          address += (UInt32)chunk;
           // Update progress
           FireProgress(ProgressState.Write, (int)offset, data.Length + 1);
         }

@@ -83,6 +83,7 @@
       this.m_lstChipType.Name = "m_lstChipType";
       this.m_lstChipType.Size = new System.Drawing.Size(121, 21);
       this.m_lstChipType.TabIndex = 11;
+      this.m_lstChipType.SelectedIndexChanged += new System.EventHandler(this.OnChipTypeChanged);
       // 
       // label3
       // 
@@ -102,6 +103,7 @@
       this.m_lstAddressSize.Name = "m_lstAddressSize";
       this.m_lstAddressSize.Size = new System.Drawing.Size(121, 21);
       this.m_lstAddressSize.TabIndex = 9;
+      this.m_lstAddressSize.SelectedIndexChanged += new System.EventHandler(this.OnAddressSizeChanged);
       // 
       // label6
       // 
@@ -121,6 +123,7 @@
       this.m_lstCapacity.Name = "m_lstCapacity";
       this.m_lstCapacity.Size = new System.Drawing.Size(121, 21);
       this.m_lstCapacity.TabIndex = 7;
+      this.m_lstCapacity.SelectedIndexChanged += new System.EventHandler(this.OnCapacityChanged);
       // 
       // label5
       // 
@@ -140,6 +143,7 @@
       this.m_lstPageSize.Name = "m_lstPageSize";
       this.m_lstPageSize.Size = new System.Drawing.Size(121, 21);
       this.m_lstPageSize.TabIndex = 5;
+      this.m_lstPageSize.SelectedIndexChanged += new System.EventHandler(this.OnPageSizeChanged);
       // 
       // label4
       // 
