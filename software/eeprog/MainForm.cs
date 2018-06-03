@@ -26,7 +26,20 @@ namespace eeprog
       m_loader.Communications += OnCommunications;
       m_loader.Progress += OnProgress;
       // Populate known EEPROM types
+      // TODO: Implement user-editable EEPROM type list, storing in the config file.
       m_eeproms = new Dictionary<string, EEPROM>();
+      m_eeproms.Add(
+        "24C64",
+        new EEPROM(ConnectionType.I2C, 6, 13, 1)
+      );
+      m_eeproms.Add(
+        "24C32",
+        new EEPROM(ConnectionType.I2C, 5, 12, 1)
+        );
+      m_eeproms.Add(
+        "24C16",
+        new EEPROM(ConnectionType.I2C, 4, 11, 1)
+        );
       m_eeproms.Add(
         "25AA640A",
         new EEPROM(ConnectionType.SPI, 5, 13, 2)
@@ -47,6 +60,11 @@ namespace eeprog
       // Populate the list of available COM ports
       List<string> ports = new List<string>(SerialPort.GetPortNames());
       ports.Sort();
+      if (IsWindows == false) {
+          string arduino = "/dev/arduino";
+          m_lstPort.Items.Add(arduino);
+          m_lstPort.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDown;
+      }
       m_lstPort.Items.AddRange(ports.ToArray());
       if (m_lstPort.Items.Count > 0)
         m_lstPort.SelectedIndex = 0;
@@ -54,9 +72,78 @@ namespace eeprog
       foreach (string name in m_eeproms.Keys)
         m_lstEEPROM.Items.Add(name);
       m_lstEEPROM.SelectedIndex = 0;
+      /*
+       * Unfortunaly, text in disabled combo boxes is almost invisible due to
+       * low contrast color, and there is no way to change this color,
+       * unless we subclass the control and override OnPaint handler.
+       * The following is not working: m_lstChipType.ForeColor = Color.DarkViolet;
+      */
+      if (!IsWindows) {
+        m_lstChipType.Enabled = true;
+        m_lstPageSize.Enabled = true;
+        m_lstCapacity.Enabled = true;
+        m_lstAddressSize.Enabled = true;
+      }
+    }
+
+    private bool IsWindows {
+      get {
+        PlatformID id =  Environment.OSVersion.Platform;
+        return id == PlatformID.Win32Windows || id == PlatformID.Win32NT
+                    || id == PlatformID.Win32S || id == PlatformID.WinCE;
+      }
     }
 
     #region "UI Events"
+
+    private void OnChipTypeChanged(object sender, EventArgs e)
+    {
+      EEPROM eeprom;
+      if (!m_eeproms.TryGetValue(m_lstEEPROM.SelectedItem.ToString(), out eeprom))
+        return;
+      string newValue = eeprom.Connection.ToString();
+      if (newValue == m_lstChipType.Text)
+        return;
+      m_lstChipType.SelectedItem = newValue;
+      // TODO: Implement new EEPROM type definition mode
+    }
+
+    private void OnAddressSizeChanged(object sender, EventArgs e)
+    {
+      EEPROM eeprom;
+      if (!m_eeproms.TryGetValue(m_lstEEPROM.SelectedItem.ToString(), out eeprom))
+        return;
+      string newValue = eeprom.AddressBytes.ToString();
+      if (newValue == m_lstAddressSize.Text)
+        return;
+      m_lstAddressSize.SelectedItem = newValue;
+      // TODO: Implement new EEPROM type definition mode
+    }
+
+    private void OnPageSizeChanged(object sender, EventArgs e)
+    {
+      EEPROM eeprom;
+      if (!m_eeproms.TryGetValue(m_lstEEPROM.SelectedItem.ToString(), out eeprom))
+        return;
+      string newValue = eeprom.PageSize.ToString();
+      LogMessage(m_txtMessages, "OnPageSizeChanged: " + sender.ToString() + "\n");
+      if (newValue == m_lstPageSize.Text)
+        return;
+      m_lstPageSize.SelectedItem = newValue;
+      // TODO: Implement new EEPROM type definition mode
+    }
+
+    private void OnCapacityChanged(object sender, EventArgs e)
+    {
+      EEPROM eeprom;
+      if (!m_eeproms.TryGetValue(m_lstEEPROM.SelectedItem.ToString(), out eeprom))
+        return;
+      string newValue = eeprom.SizeInK;
+      if (newValue == m_lstCapacity.Text)
+        return;
+      m_lstCapacity.SelectedItem = newValue;
+      // TODO: Implement new EEPROM type definition mode
+    }
 
     private void OnEEPROMChanged(object sender, EventArgs e)
     {
@@ -73,7 +160,8 @@ namespace eeprog
     private void OnReadClick(object sender, EventArgs e)
     {
       // Get the port and the EEPROM to use
-      string port = m_lstPort.SelectedItem.ToString();
+      // Allowed manual port name typing, hence use .Text property
+      string port = m_lstPort.Text; //.SelectedItem.ToString();
       EEPROM eeprom;
       if (!m_eeproms.TryGetValue(m_lstEEPROM.SelectedItem.ToString(), out eeprom))
         {
@@ -113,14 +201,16 @@ namespace eeprog
       dlg.AddExtension = true;
       dlg.CheckFileExists = true;
       dlg.Title = "Open ROM Image";
-      dlg.Filter = "ROM Image (*.rom)|*.rom";
+      dlg.Filter = "ROM Image (*.rom)|*.rom|E2P Image (*.e2p)|*.e2p";
+      dlg.FilterIndex = 2;
       DialogResult result = dlg.ShowDialog();
       if (result == DialogResult.OK)
       {
+        int offset = (dlg.FilterIndex == 2) ? 0x98 : 0;
         // Start the reading task and save the data if successful
         Task.Factory.StartNew(() =>
         {
-          m_loader.Write(port, eeprom, 0, new FileInfo(dlg.FileName));
+            m_loader.Write(port, eeprom, 0, (uint)offset, new FileInfo(dlg.FileName));
         });
       }
     }
